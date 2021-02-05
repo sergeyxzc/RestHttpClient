@@ -1,10 +1,10 @@
-## RestHttpClient
+# RestHttpClient
 Simple REST HttpClient with authentication strategy
 
 
-# IRestHttpSerializer for System.Text.Json.Serializer
+## IRestHttpSerializer for System.Text.Json.Serializer
 
-``
+
 public class SystemTextJsonSerializer : IRestHttpSerializer
 {
     public static JsonSerializerOptions DefaultSerializerOptions = new JsonSerializerOptions()
@@ -22,6 +22,5 @@ public class SystemTextJsonSerializer : IRestHttpSerializer
         return JsonSerializer.Deserialize<TResponse>(result, _jsonSerializerOptions);
     }
 }
-``
 
-# IRestHttpSerializer for NewtonJsonSerializer
+## IRestHttpSerializer for NewtonJsonSerializer
