@@ -1,25 +1,22 @@
 ﻿using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text.Json;
 
 namespace RestHttpClient
 {
     public static class RestHttpClientFactory
     {
-        public static RestHttpClient Create(Uri baseAddress, IAuthHttpStrategy authHttpStrategy = null,
-            TimeSpan? timeout = null, JsonSerializerOptions jsonSerializerOptions = null)
+        public static RestHttpClient Create(Uri baseAddress, IRestHttpSerializer serializer, IAuthHttpStrategy authHttpStrategy, TimeSpan? timeout = null)
         {
             var handler = new HttpClientHandler();
 
             if (authHttpStrategy != null && authHttpStrategy.UseDefaultCredentials())
-                handler.UseDefaultCredentials = authHttpStrategy.UseDefaultCredentials();
+                handler.UseDefaultCredentials = true;
 
-            return Create(handler, baseAddress, timeout, authHttpStrategy, jsonSerializerOptions);
+            return Create(handler, baseAddress, authHttpStrategy, serializer, timeout);
         }
 
-        public static RestHttpClient Create(HttpMessageHandler handler, Uri baseAddress, TimeSpan? timeout = null,
-            IAuthHttpStrategy authHttpStrategy = null, JsonSerializerOptions jsonSerializerOptions = null)
+        public static RestHttpClient Create(HttpMessageHandler handler, Uri baseAddress, IAuthHttpStrategy authHttpStrategy, IRestHttpSerializer serializer, TimeSpan? timeout = null)
         {
             var client = new HttpClient(handler, true)
             {
@@ -32,7 +29,7 @@ namespace RestHttpClient
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            return new RestHttpClient(client, authHttpStrategy, jsonSerializerOptions);
+            return new RestHttpClient(client, authHttpStrategy, serializer);
         }
     }
 }

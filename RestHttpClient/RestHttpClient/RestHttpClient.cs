@@ -1,28 +1,22 @@
 ﻿using System;
 using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace RestHttpClient
 {
     public class RestHttpClient : IDisposable
     {
-        public static JsonSerializerOptions DefaultSerializerOptions = new JsonSerializerOptions()
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-
         private readonly IAuthHttpStrategy _authHttpStrategy;
-        private readonly JsonSerializerOptions _jsonSerializerOptions;
+        private readonly IRestHttpSerializer _serializer;
         private readonly HttpClient _client;
         private volatile bool _disposed;
 
-        public RestHttpClient(HttpClient client, IAuthHttpStrategy authHttpStrategy, JsonSerializerOptions jsonSerializerOptions = null)
+        public RestHttpClient(HttpClient client, IAuthHttpStrategy authHttpStrategy, IRestHttpSerializer serializer)
         {
             _client = client;
             _authHttpStrategy = authHttpStrategy;
-            _jsonSerializerOptions = jsonSerializerOptions ?? DefaultSerializerOptions;
+            _serializer = serializer;
         }
 
         public void Dispose()
@@ -33,7 +27,7 @@ namespace RestHttpClient
             _client.Dispose();
         }
 
-        public async ValueTask<HttpResponseMessage> Get(string url)
+        public async ValueTask<HttpResponseMessage> GetAsync(string url)
         {
             CheckDisposed();
             await UpdateAuthAsync();
@@ -49,23 +43,6 @@ namespace RestHttpClient
             var response = await _client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
-            return await ReadResponseAsync<TResponse>(response);
-        }
-
-        public async ValueTask DeleteAsync(string url)
-        {
-            CheckDisposed();
-            await UpdateAuthAsync();
-            var response = await _client.DeleteAsync(url);
-            response.EnsureSuccessStatusCode();
-        }
-
-        public async ValueTask<TResponse> DeleteAsync<TResponse>(string url)
-        {
-            CheckDisposed();
-            await UpdateAuthAsync();
-            var response = await _client.DeleteAsync(url);
-            response.EnsureSuccessStatusCode();
             return await ReadResponseAsync<TResponse>(response);
         }
 
@@ -97,6 +74,23 @@ namespace RestHttpClient
             return await ReadResponseAsync<TResponse>(response);
         }
 
+        public async ValueTask DeleteAsync(string url)
+        {
+            CheckDisposed();
+            await UpdateAuthAsync();
+            var response = await _client.DeleteAsync(url);
+            response.EnsureSuccessStatusCode();
+        }
+
+        public async ValueTask<TResponse> DeleteAsync<TResponse>(string url)
+        {
+            CheckDisposed();
+            await UpdateAuthAsync();
+            var response = await _client.DeleteAsync(url);
+            response.EnsureSuccessStatusCode();
+            return await ReadResponseAsync<TResponse>(response);
+        }
+
         private async ValueTask<HttpResponseMessage> InternalPostAsync(string url, HttpContent content)
         {
             await UpdateAuthAsync();
@@ -107,7 +101,7 @@ namespace RestHttpClient
 
         private StringContent GetSerializedContent<TContent>(TContent content)
         {
-            var serializedContent = JsonSerializer.Serialize(content, _jsonSerializerOptions);
+            var serializedContent = _serializer.SerializeContent(content);
             var stringContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
             return stringContent;
         }
@@ -115,7 +109,7 @@ namespace RestHttpClient
         private async ValueTask<TResponse> ReadResponseAsync<TResponse>(HttpResponseMessage response)
         {
             var result = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<TResponse>(result, _jsonSerializerOptions);
+            return _serializer.DeserializeContent<TResponse>(result);
         }
 
         private async ValueTask UpdateAuthAsync()
